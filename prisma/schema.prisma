@@ -16,7 +16,17 @@ datasource db {
 
 
 model User {
-  id        Int       @id @default(autoincrement())
+  id        String    @id @unique @default(uuid())
   username  String    @unique @db.VarChar(30)
   hashpwd   String    @db.Text
+  messages  Message[]
+}
+
+model Message {
+  id            String        @id @unique @default(uuid())
+  content       String        @db.Text
+  authorId      String     
+  author        User          @relation(fields: [authorId], references: [id])
+  room          String        @db.Text
+  timestamp     DateTime      @default(now())
 }
