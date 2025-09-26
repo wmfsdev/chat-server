@@ -10,6 +10,10 @@ const server = createServer(app);
 app.use(cors());
 
 const io = new Server(server, {
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 2 * 60 * 1000,
+    skipMiddlewares: true,
+  },
   cors: {
     origin: "http://localhost:5173",
   },
