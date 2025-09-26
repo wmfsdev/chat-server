@@ -7,50 +7,64 @@ const prisma = require('../prisma/client');
 
 const accountRouter = express.Router();
 
-accountRouter.get("/test", async (req, res, next) => {
-  // basic endpoint for checking who is online
-  console.log("testing get")
 
-  const sockets = await req.io.of('/profile').fetchSockets();  console.log("start looping sockets")
-  for ( const socket of sockets) {
+accountRouter.post("/chat", async(req, res, next) => {
+  console.log("retrieving chat history")
+  const { room, author } = req.body
   
-    console.log(socket.id)
-  }
-  console.log("end looping sockets")
-//  console.log("sockets: ", sockets[0].id)
-  res.status(200).json()
+  const chat = await prisma.message.findMany({
+    where: {
+      OR: [
+        {
+          AND: [
+            { authorId: author },
+            { room: room }
+          ]
+        },
+        {
+          AND: [
+            { authorId: room },
+            { room: author }
+          ]
+        }
+      ]
+    },
+    select: {
+      id: true,
+      content: true,
+      author: {
+        select: {
+          username: true
+        }
+      }
+    }
+  })
+  console.log(chat)
+  res.status(200).json(chat)
 })
 
-accountRouter.get("/some", async (req, res, next) => {
-
-  console.log("/some route")
-  
+accountRouter.get("/auth", async (req, res, next) => {
+  console.log("/auth route")
+  // if statement - check request is coming from chat frontend
   try {
     passport.authenticate('jwt', async (err, user, info) => {
       if (!user) {
         return res.status(401).json({ message: 'not authorised' });
       }
-      console.log("passport user: ", user)
-      // const userId = user.id;
-     
-      return res.status(200).json({ username: user.username });
+      return res.status(200).json({ username: user.username, id: user.id });
     })(req, res, next);
     } catch (error) {
       const status = error.statusCode;
       res.status(status).json(error.data);
     }
-
   // fetch request triggers token authentication
   // retrieve username at same time
 })
 
 accountRouter.post("/login", (req, res, next) => {
-  console.log("POST Login");
-  // if successful 200 response - makes client redirect
-  // to "profile page" maybe with socket id?
+  // console.log("POST Login");
   try {
     passport.authenticate('local', (err, user, info) => {
-      console.log(user)
       if (err) { return next(err) }
       if (!user) {
         return res.status(401).json()
@@ -58,12 +72,13 @@ accountRouter.post("/login", (req, res, next) => {
       if (user) {
         const payloadObj = {
           id: user.id,
-          username: user.username
+          username: user.username,
+          sessionId: user.sessionId,
         }
         const token = jwt.sign(
           payloadObj, 
           process.env.SECRET, 
-          { algorithm: 'HS256', expiresIn: '1800000' }
+          { algorithm: 'HS256', expiresIn: '180000000' }
         );
         res.status(200).json({ token })
       }
@@ -90,13 +105,13 @@ accountRouter.post('/signup', async (req, res, next) => {
     const payloadObj = {
       id: user.id,
       username: user.username,
-     // role: user.role,
+      sessionId: user.sessionId,
     };
 
     const token = jwt.sign(
       payloadObj, 
       process.env.SECRET, 
-      { algorithm: 'HS256', expiresIn: '1800000' }
+      { algorithm: 'HS256', expiresIn: '180000000' }
     );
     res.status(200).json({ token });
   } catch (err) {
