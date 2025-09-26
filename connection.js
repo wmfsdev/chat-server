@@ -2,12 +2,12 @@ const { io } = require('./socket-instance')
 const passport = require('passport')
 require('./config/passport')
 const jwt = require('jsonwebtoken')
-
+const prisma = require('./prisma/client')
 
 const connect = io.of("/profile");
 
 connect.use((socket, next) => {
-  // token auth
+
   const token = socket.handshake.auth.token
 
   jwt.verify(token, process.env.SECRET, function(err, decoded) {
@@ -23,34 +23,39 @@ connect.use((socket, next) => {
   })
 })
 
-
 connect.on("connection", async (socket) => {
   console.log("connected", socket.id)
 
-  const users = []
-  const sockets = await connect.fetchSockets()
-  
-  for ( const socket of sockets) {
-    users.push({
-      socketID: socket.id,
-      userID: socket.data.id,
-      username: socket.data.username
-    })
+  if (socket.recovered) {
+    console.log("socket recovered")
   }
-  console.log("USERS: ", users)
-  socket.emit("users", users)
+
+  socket.join(socket.data.id)
   
   socket.broadcast.emit("user_connected", {
-      socketID: socket.id,
-      userID: socket.data.id,
-      username: socket.data.username
+    socketID: socket.id,
+    userID: socket.data.id,
+    username: socket.data.username
   });
+
+  socket.on("req_users", async(data) => {
+    console.log("client requested 'users'")
+    const sockets = await connect.fetchSockets()
+    const users = []
+
+    for (const socket of sockets) {
+      users.push({
+        userID: socket.data.id,
+        username: socket.data.username,
+        sessionId: socket.data.sessionId,
+      })
+    }
+    socket.emit("users", users) 
+  })
 
   // DISCONNECT
   socket.on("disconnecting", async () => {
     console.log(`user disconnecting...`)
-    console.log(socket.data)
-    console.log(socket.rooms)
     const username = await socket.data.username
     socket.broadcast.emit("user_disconnected", {
       username: username
@@ -66,11 +71,14 @@ connect.on("connection", async (socket) => {
   })
 
   // SEND PRIVATE MESSAGE
-  socket.on("send_priv_message", (data) => {
-    console.log(data)
+  socket.on("send_priv_message", async(data) => {
+    const message = await prisma.message.create({
+      data: {
+        content: data.message,
+        room: data.to,
+        authorId: data.from.id,
+      }
+    })
     socket.to(data.to).emit("receive_priv_message", { id: data.id, from: data.from, message: data.message })
   })
 });
-
-
-
