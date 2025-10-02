@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 require('../config/passport');
 const prisma = require('../prisma/client');
+const { Prisma } = require('@prisma/client');
 
 const accountRouter = express.Router();
 
@@ -67,7 +68,7 @@ accountRouter.post("/login", (req, res, next) => {
     passport.authenticate('local', (err, user, info) => {
       if (err) { return next(err) }
       if (!user) {
-        return res.status(401).json()
+        return res.status(401).json({info})
       }
       if (user) {
         const payloadObj = {
@@ -84,8 +85,8 @@ accountRouter.post("/login", (req, res, next) => {
       }
     })(req, res, next)
   } catch (error) {
-    const status = error.statusCode;
-    res.status(status).json(error.data);
+    console.log("throw error")
+    next(error)
   }
 });
 
@@ -107,7 +108,6 @@ accountRouter.post('/signup', async (req, res, next) => {
       username: user.username,
       sessionId: user.sessionId,
     };
-
     const token = jwt.sign(
       payloadObj, 
       process.env.SECRET, 
@@ -115,8 +115,14 @@ accountRouter.post('/signup', async (req, res, next) => {
     );
     res.status(200).json({ token });
   } catch (err) {
-    if (err.code === 'P2002') {
-      return res.status(422).json([{ msg: 'Username already taken' }]);
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      if (err.code === 'P2002') {
+        return res.status(422).json([{ msg: 'Username already taken' }]);
+      } else {
+        return res.status(422).json([{ msg: 'Database request error' }])
+      }
+    } else {
+      next(err)
     }
   }
 
