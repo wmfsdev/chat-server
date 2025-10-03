@@ -4,7 +4,8 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 require('../config/passport');
 const prisma = require('../prisma/client');
-const { Prisma } = require('@prisma/client');
+const { Prisma } = require('../generated/prisma')
+const { body, validationResult } = require('express-validator')
 
 const accountRouter = express.Router();
 
@@ -90,42 +91,71 @@ accountRouter.post("/login", (req, res, next) => {
   }
 });
 
-accountRouter.post('/signup', async (req, res, next) => {
-  console.log("POST Signup")
-  const { username } = req.body;
-  const { password } = req.body;
-  const hashpwd = await bcrypt.hash(password, 10);
+accountRouter.post('/signup', 
+  [
+  body('username')
+    .notEmpty().withMessage('Username is required')
+    .trim()
+    .isLength({ min: 5, max: 18 })
+    .withMessage('Username must be between 5 and 18 characters')
+    .isAlphanumeric()
+    .withMessage('May only contain alphanumeric characters'),
+  body('password')
+    .trim()
+    .isLength({ min: 6, max: 25 })
+    .withMessage('Password must be between 6 and 25 characters'),
+  body('confirm')
+    .custom((value, { req }) => value === req.body.password)
+    .withMessage('Passwords must match'),
+], async (req, res, next) => {
+    console.log("POST Signup")
 
-  try {
-    const user = await prisma.user.create({
-      data: {
-        username,
-        hashpwd,
-      },
-    });
-    const payloadObj = {
-      id: user.id,
-      username: user.username,
-      sessionId: user.sessionId,
-    };
-    const token = jwt.sign(
-      payloadObj, 
-      process.env.SECRET, 
-      { algorithm: 'HS256', expiresIn: '180000000' }
-    );
-    res.status(200).json({ token });
-  } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError) {
-      if (err.code === 'P2002') {
-        return res.status(422).json([{ msg: 'Username already taken' }]);
-      } else {
-        return res.status(422).json([{ msg: 'Database request error' }])
+    const errors = validationResult(req)
+    console.log("validation errors: ", errors)
+
+    if (errors.isEmpty()) {
+
+      const { username } = req.body;
+      const { password } = req.body;
+      const hashpwd = await bcrypt.hash(password, 10);
+
+      try {
+        const user = await prisma.user.create({
+          data: {
+            username,
+            hashpwd,
+          },
+        });
+        const payloadObj = {
+          id: user.id,
+          username: user.username,
+          sessionId: user.sessionId,
+        };
+        const token = jwt.sign(
+          payloadObj, 
+          process.env.SECRET, 
+          { algorithm: 'HS256', expiresIn: '180000000' }
+        );
+        res.status(200).json({ token });
+      } catch (err) {
+        console.log(err)
+        if (err instanceof Prisma.PrismaClientKnownRequestError) {
+          if (err.code === 'P2002') {
+            return res.status(422).json([{ msg: 'Username already taken' }]);
+          } else {
+            return res.status(422).json([{ msg: 'Database request error' }])
+          }
+        } else {
+          next(err)
+        }
       }
-    } else {
-      next(err)
-    }
-  }
 
+    } else {
+      const err = new Error('validation')
+      err.statusCode = 422
+      err.data = errors.array()
+      res.status(err.statusCode).json(err.data)
+    }
 })
 
 module.exports = accountRouter;
