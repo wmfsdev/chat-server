@@ -9,7 +9,6 @@ const { body, validationResult } = require('express-validator')
 
 const accountRouter = express.Router();
 
-
 accountRouter.post("/chat", async(req, res, next) => {
   console.log("retrieving chat history")
   const { room, author } = req.body
@@ -63,13 +62,35 @@ accountRouter.get("/auth", async (req, res, next) => {
   // retrieve username at same time
 })
 
-accountRouter.post("/login", (req, res, next) => {
-  // console.log("POST Login");
+accountRouter.post("/login",
+  [
+  body('username')
+    .notEmpty().withMessage('Username is required')
+    .trim()
+    .isLength({ min: 5, max: 18 })
+    .withMessage('Username must be between 5 and 18 characters')
+    .isAlphanumeric()
+    .withMessage('May only contain alphanumeric characters'),
+  body('password')
+    .trim()
+    .isLength({ min: 6, max: 25 })
+    .withMessage('Must be between 6 and 25 characters'),
+], (req, res, next) => {
   try {
+    const errors = validationResult(req)
+
+    if (errors.isEmpty()) {
+      const err = new Error('validation failed');
+      err.statusCode = 422;
+      err.data = errors.array();
+      res.status(err.statusCode).json(err.data)
+    }
+
     passport.authenticate('local', (err, user, info) => {
       if (err) { return next(err) }
       if (!user) {
-        return res.status(401).json({info})
+        console.log(info)
+        return res.status(401).json({ info })
       }
       if (user) {
         const payloadObj = {
@@ -134,7 +155,7 @@ accountRouter.post('/signup',
         const token = jwt.sign(
           payloadObj, 
           process.env.SECRET, 
-          { algorithm: 'HS256', expiresIn: '180000000' }
+          { algorithm: 'HS256', expiresIn: '1800' }
         );
         res.status(200).json({ token });
       } catch (err) {
