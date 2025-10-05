@@ -4,7 +4,6 @@ require('./config/passport')
 const jwt = require('jsonwebtoken')
 const prisma = require('./prisma/client')
 
-
 const connect = io.of("/profile");
 
 connect.use((socket, next) => {
@@ -13,13 +12,16 @@ connect.use((socket, next) => {
     if (err) {
       if (err.name === 'JsonWebTokenError') {
         err.message = 'Not Authorised'
-        next(err)
-      } else {
+        return next(err)
+      } 
+      if (err.name === 'TokenExpiredError') {
         err.message = 'Token Expired'
+        return next(err)
+      } else {
+        err.message = 'Verification Error'
         next(err)
       }
     } else {
-      console.log("decoded: ", decoded)
       socket.data.username = decoded.username
       socket.data.id = decoded.id
       next()
@@ -29,7 +31,6 @@ connect.use((socket, next) => {
 
 connect.on("connection", async (socket) => {
   console.log("connected", socket.id)
-  console.log(socket.data)
   if (socket.recovered) {
     console.log("socket recovered")
   }
