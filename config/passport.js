@@ -9,7 +9,7 @@ const prisma = require('../prisma/client');
 
 passport.use(
   new LocalStrategy(async (username, password, done) => {
-    try {
+    try { 
       const user = await prisma.user.findUnique({
         where: {
           username,
@@ -17,13 +17,13 @@ passport.use(
       });
 
       if (!user) {
-        return done(null, false, { message: "Incorrect username" })
+        return done(null, false, { message: "Incorrect details entered" })
       }
 
       const match = await bcrypt.compare(password, user.hashpwd)
 
       if (!match) {
-        return done(null, false, { message: "Incorrect password" })
+        return done(null, false, { message: "Incorrect details entered" })
       }
 
       return done(null, user)
@@ -44,6 +44,8 @@ const opts = {
 passport.use(
   new JwtStrategy(opts, (jwt_payload, done) => {
     try {
+      console.log("jwt authorised")
+      console.log(jwt_payload)
       return done(null, jwt_payload, { message: 'authorised', status: 200 });
     } catch (error) {
       done(error);
