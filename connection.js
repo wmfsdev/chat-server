@@ -3,6 +3,7 @@ const passport = require('passport')
 require('./config/passport')
 const jwt = require('jsonwebtoken')
 const prisma = require('./prisma/client')
+const zod = require("zod")
 
 const connect = io.of("/profile");
 
@@ -44,9 +45,9 @@ connect.on("connection", async (socket) => {
   });
 
   socket.on("req_users", async(data) => {
-    console.log("client requested 'users'")
     const sockets = await connect.fetchSockets()
     const users = []
+    const userCount = sockets.length
 
     for (const socket of sockets) {
       users.push({
@@ -55,7 +56,7 @@ connect.on("connection", async (socket) => {
         sessionId: socket.data.sessionId,
       })
     }
-    socket.emit("users", users) 
+    socket.emit("users", users, userCount) 
   })
 
   // DISCONNECT
@@ -69,21 +70,30 @@ connect.on("connection", async (socket) => {
 
   // JOIN ROOM
   socket.on("join_room", (id, data) => {
-    console.log("ROOM ID: ", id)
-    console.log(`User ${data.username} joined room`)
-
     socket.to(id).emit("user_joined", data.username)
   })
 
   // SEND PRIVATE MESSAGE
-  socket.on("send_priv_message", async(data) => {
-    const message = await prisma.message.create({
-      data: {
-        content: data.message,
-        room: data.to,
-        authorId: data.from.id,
-      }
+  socket.on("send_priv_message", async(data, callback) => {
+    const User = zod.object({
+      message: zod.string().min(1).max(5),
     })
-    socket.to(data.to).emit("receive_priv_message", { id: data.id, from: data.from, message: data.message })
+    const result = User.safeParse({ message: data.message })
+
+    if (!result.success) {
+      callback({
+        status: "Bad Request",
+      });
+    } else {
+      await prisma.message.create({
+        data: {
+          content: data.message,
+          room: data.to,
+          authorId: data.from.id,
+        }
+      })
+      callback({ status: "great" })
+      socket.to(data.to).emit("receive_priv_message", { id: data.id, from: data.from, message: data.message })
+    }  
   })
 });
