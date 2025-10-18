@@ -13,40 +13,51 @@ accountRouter.post("/chat", async(req, res, next) => {
   console.log("retrieving chat history")
   const { room, author } = req.body
   
-  const chat = await prisma.message.findMany({
-    where: {
-      OR: [
-        {
-          AND: [
-            { authorId: author },
-            { room: room }
-          ]
-        },
-        {
-          AND: [
-            { authorId: room },
-            { room: author }
-          ]
-        }
-      ]
-    },
-    select: {
-      id: true,
-      content: true,
-      author: {
-        select: {
-          username: true
+  try {
+    const chat = await prisma.message.findMany({
+      where: {
+        OR: [
+          {
+            AND: [
+              { authorId: author },
+              { room: room }
+            ]
+          },
+          {
+            AND: [
+              { authorId: room },
+              { room: author }
+            ]
+          }
+        ]
+      },
+      select: {
+        id: true,
+        content: true,
+        author: {
+          select: {
+            username: true
+          }
         }
       }
-    }
-  })
-  console.log(chat)
-  res.status(200).json(chat)
+    })
+    console.log(chat)
+    res.status(200).json(chat)
+  } catch(err) {
+    console.log(err)
+    next(err)
+  }
 })
 
 accountRouter.get("/auth", async (req, res, next) => {
   console.log("/auth route")
-  // if statement - check request is coming from chat frontend
+  
+  if (req.headers.origin !== process.env.CHAT_FRONTEND_URL) {
+    const err = new Error('Unauthorised Origin')
+    err.statusCode = 401
+    return next(err)
+  }
+  
   try {
     passport.authenticate('jwt', async (err, user, info) => {
       if (!user) {
@@ -54,12 +65,10 @@ accountRouter.get("/auth", async (req, res, next) => {
       }
       return res.status(200).json({ username: user.username, id: user.id });
     })(req, res, next);
-    } catch (error) {
-      const status = error.statusCode;
-      res.status(status).json(error.data);
-    }
-  // fetch request triggers token authentication
-  // retrieve username at same time
+  } catch (error) {
+    const status = error.statusCode;
+    res.status(status).json(error.data);
+  }
 })
 
 accountRouter.post("/login",
@@ -76,20 +85,26 @@ accountRouter.post("/login",
     .isLength({ min: 6, max: 25 })
     .withMessage('Must be between 6 and 25 characters'),
 ], (req, res, next) => {
+
+  if (req.headers.origin !== process.env.CHAT_FRONTEND_URL) {
+    const err = new Error('Unauthorised Origin')
+    err.statusCode = 401
+    return next(err)
+  }
+
   try {
     const errors = validationResult(req)
 
-    if (errors.isEmpty()) {
+    if (!errors.isEmpty()) {
       const err = new Error('validation failed');
       err.statusCode = 422;
       err.data = errors.array();
-      res.status(err.statusCode).json(err.data)
+      return res.status(err.statusCode).json(err.data)
     }
 
     passport.authenticate('local', (err, user, info) => {
       if (err) { return next(err) }
       if (!user) {
-        console.log(info)
         return res.status(401).json({ info })
       }
       if (user) {
@@ -107,7 +122,7 @@ accountRouter.post("/login",
       }
     })(req, res, next)
   } catch (error) {
-    console.log("throw error")
+    console.log("catch error")
     next(error)
   }
 });
