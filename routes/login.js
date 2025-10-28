@@ -33,6 +33,7 @@ accountRouter.post("/chat", async(req, res, next) => {
       },
       select: {
         id: true,
+        timestamp: true,
         content: true,
         author: {
           select: {
