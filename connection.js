@@ -76,7 +76,7 @@ connect.on("connection", async (socket) => {
   // SEND PRIVATE MESSAGE
   socket.on("send_priv_message", async(data, callback) => {
     const User = zod.object({
-      message: zod.string().min(1).max(5),
+      message: zod.string().min(1).max(500),
     })
     const result = User.safeParse({ message: data.message })
 
