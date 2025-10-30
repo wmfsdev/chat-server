@@ -44,6 +44,20 @@ connect.on("connection", async (socket) => {
     username: socket.data.username
   });
 
+  socket.on("send_message", async(data) => {
+    console.log("send_message")
+    console.log(data)
+
+    await prisma.message.create({
+      data: {
+        content: data.message,
+        room: data.room,
+        authorId: data.userId
+      
+      }
+    })
+  })
+
   socket.on("req_users", async(data) => {
     const sockets = await connect.fetchSockets()
     const users = []
@@ -75,6 +89,7 @@ connect.on("connection", async (socket) => {
 
   // SEND PRIVATE MESSAGE
   socket.on("send_priv_message", async(data, callback) => {
+
     const User = zod.object({
       message: zod.string().min(1).max(500),
     })
