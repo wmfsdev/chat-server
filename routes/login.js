@@ -9,8 +9,7 @@ const { body, validationResult } = require('express-validator')
 
 const accountRouter = express.Router();
 
-accountRouter.post("/chat", async(req, res, next) => {
-  console.log("retrieving chat history")
+accountRouter.post("/direct_chat", async(req, res, next) => {
   const { room, author } = req.body
   
   try {
@@ -30,6 +29,33 @@ accountRouter.post("/chat", async(req, res, next) => {
             ]
           }
         ]
+      },
+      select: {
+        id: true,
+        timestamp: true,
+        content: true,
+        author: {
+          select: {
+            username: true
+          }
+        }
+      }
+    })
+    console.log(chat)
+    res.status(200).json(chat)
+  } catch(err) {
+    console.log(err)
+    next(err)
+  }
+})
+
+accountRouter.post("/public_chat", async(req,res, next) => {
+  const { room } = req.body
+
+  try {
+    const chat = await prisma.message.findMany({
+      where: {
+        room: room
       },
       select: {
         id: true,
