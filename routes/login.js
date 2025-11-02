@@ -14,6 +14,9 @@ accountRouter.post("/direct_chat", async(req, res, next) => {
   
   try {
     const chat = await prisma.message.findMany({
+      orderBy: {
+        timestamp: 'asc'
+      },
       where: {
         OR: [
           {
@@ -54,6 +57,9 @@ accountRouter.post("/public_chat", async(req,res, next) => {
 
   try {
     const chat = await prisma.message.findMany({
+      orderBy: {
+        timestamp: 'asc'
+      },
       where: {
         room: room
       },
