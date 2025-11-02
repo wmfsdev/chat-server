@@ -37,26 +37,13 @@ connect.on("connection", async (socket) => {
   }
 
   socket.join(socket.data.id)
+  socket.join("public")
   
   socket.broadcast.emit("user_connected", {
     socketID: socket.id,
     userID: socket.data.id,
     username: socket.data.username
   });
-
-  socket.on("send_message", async(data) => {
-    console.log("send_message")
-    console.log(data)
-
-    await prisma.message.create({
-      data: {
-        content: data.message,
-        room: data.room,
-        authorId: data.userId
-      
-      }
-    })
-  })
 
   socket.on("req_users", async(data) => {
     const sockets = await connect.fetchSockets()
@@ -87,6 +74,34 @@ connect.on("connection", async (socket) => {
     socket.to(id).emit("user_joined", data.username)
   })
 
+  // SEND PUBLIC MESSAGE
+  socket.on("send_public_message", async(data, callback) => {
+    console.log("send_public_message")
+    console.log(data)
+
+    const User = zod.object({
+      message: zod.string().min(1).max(500),
+    })
+    const result = User.safeParse({ message: data.message })
+
+    if (!result.success) {
+      callback({ status: "Bad Request"})
+    } else {
+      const message = await prisma.message.create({
+        data: {
+          content: data.message,
+          room: data.room,
+          authorId: data.userId
+        }
+      })
+      console.log("message: ", message)
+      const { id, content, timestamp } = message
+      
+      socket.to("public").emit("receive_public_message", { id: data.id, username: data.username, message: content, timestamp: timestamp })
+      callback({ status: "Great" })
+    }
+  })
+
   // SEND PRIVATE MESSAGE
   socket.on("send_priv_message", async(data, callback) => {
 
@@ -96,9 +111,7 @@ connect.on("connection", async (socket) => {
     const result = User.safeParse({ message: data.message })
 
     if (!result.success) {
-      callback({
-        status: "Bad Request",
-      });
+      callback({ status: "Bad Request" });
     } else {
       await prisma.message.create({
         data: {
@@ -107,7 +120,7 @@ connect.on("connection", async (socket) => {
           authorId: data.from.id,
         }
       })
-      callback({ status: "great" })
+      callback({ status: "Great" })
       socket.to(data.to).emit("receive_priv_message", { id: data.id, from: data.from, message: data.message })
     }  
   })
