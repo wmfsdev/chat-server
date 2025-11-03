@@ -15,7 +15,7 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "NODE_ENV=dev && node --watch index.js"
   },
   "dependencies": {
     "@prisma/client": "^6.14.0",
