@@ -7,6 +7,10 @@ const cors = require("cors")
 const app = express();
 const server = createServer(app);
 
+const corsOrigin = process.env.NODE_ENV === 'dev'
+  ? process.env.DEV_CORS_ORIGIN
+  : process.env.PROD_CORS_ORIGIN
+
 app.use(cors());
 
 const io = new Server(server, {
@@ -15,7 +19,7 @@ const io = new Server(server, {
     skipMiddlewares: true,
   },
   cors: {
-    origin: "http://localhost:5173",
+    origin: corsOrigin
   },
 });
 

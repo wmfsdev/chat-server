@@ -82,10 +82,14 @@ accountRouter.post("/public_chat", async(req,res, next) => {
   }
 })
 
+const frontendUrl = process.env.NODE_ENV === 'dev'
+  ? process.env.DEV_FRONTEND_URL
+  : process.env.PROD_FRONTEND_URL
+
 accountRouter.get("/auth", async (req, res, next) => {
   console.log("/auth route")
   
-  if (req.headers.origin !== process.env.CHAT_FRONTEND_URL) {
+  if (req.headers.origin !== frontendUrl) {
     const err = new Error('Unauthorised Origin')
     err.statusCode = 401
     return next(err)
@@ -119,7 +123,7 @@ accountRouter.post("/login",
     .withMessage('Must be between 6 and 25 characters'),
 ], (req, res, next) => {
 
-  if (req.headers.origin !== process.env.CHAT_FRONTEND_URL) {
+  if (req.headers.origin !== frontendUrl) {
     const err = new Error('Unauthorised Origin')
     err.statusCode = 401
     return next(err)
