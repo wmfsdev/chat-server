@@ -1,11 +1,10 @@
-const { app, io, server } = require('./socket-instance');
-const express = require('express')
-
-require('./connection')
-
-const accountRouter = require('./routes/login');
 
 require('dotenv').config();
+require('./connection')
+
+const { app, io, server } = require('./socket-instance');
+const express = require('express')
+const accountRouter = require('./routes/login');
 
 app.use(express.json());
 
@@ -22,6 +21,6 @@ app.use((err, req, res, next) => {
   res.status(500).send(err);
 });
 
-server.listen(3001, () => {
+server.listen(process.env.PORT, () => {
   console.log("server running");
 });
