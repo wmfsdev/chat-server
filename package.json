@@ -15,7 +15,9 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "dev": "NODE_ENV=dev && node --watch index.js"
+    "start": "node index",
+    "dev": "NODE_ENV=dev && node --watch index.js",
+    "build": "prisma generate && prisma migrate deploy"
   },
   "dependencies": {
     "@prisma/client": "^6.14.0",
