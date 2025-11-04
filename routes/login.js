@@ -8,6 +8,7 @@ const { Prisma } = require('../generated/prisma')
 const { body, validationResult } = require('express-validator')
 
 const accountRouter = express.Router();
+const frontendUrl = process.env.FRONTEND_URL
 
 accountRouter.post("/direct_chat", async(req, res, next) => {
   const { room, author } = req.body
@@ -81,10 +82,6 @@ accountRouter.post("/public_chat", async(req,res, next) => {
     next(err)
   }
 })
-
-const frontendUrl = process.env.NODE_ENV === 'dev'
-  ? process.env.DEV_FRONTEND_URL
-  : process.env.PROD_FRONTEND_URL
 
 accountRouter.get("/auth", async (req, res, next) => {
   console.log("/auth route")

@@ -7,9 +7,7 @@ const cors = require("cors")
 const app = express();
 const server = createServer(app);
 
-const corsOrigin = process.env.NODE_ENV === 'dev'
-  ? process.env.DEV_CORS_ORIGIN
-  : process.env.PROD_CORS_ORIGIN
+const corsOrigin = process.env.CORS_ORIGIN
 
 app.use(cors());
 
