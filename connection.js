@@ -97,14 +97,18 @@ connect.on("connection", async (socket) => {
       console.log("message: ", message)
       const { id, content, timestamp } = message
       
-      socket.to("public").emit("receive_public_message", { id: data.id, username: data.username, message: content, timestamp: timestamp })
+      socket.to("public").emit("receive_public_message", {
+        id: data.id,
+        username: data.username,
+        message: content,
+        timestamp: timestamp
+      })
       callback({ status: "Great" })
     }
   })
 
   // SEND PRIVATE MESSAGE
   socket.on("send_priv_message", async(data, callback) => {
-
     const User = zod.object({
       message: zod.string().min(1).max(500),
     })
@@ -113,7 +117,7 @@ connect.on("connection", async (socket) => {
     if (!result.success) {
       callback({ status: "Bad Request" });
     } else {
-      await prisma.message.create({
+      const message = await prisma.message.create({
         data: {
           content: data.message,
           room: data.to,
@@ -121,7 +125,12 @@ connect.on("connection", async (socket) => {
         }
       })
       callback({ status: "Great" })
-      socket.to(data.to).emit("receive_priv_message", { id: data.id, from: data.from, message: data.message })
-    }  
+      socket.to(data.to).emit("receive_priv_message", { 
+        id: data.id,
+        from: data.from,
+        message: data.message,
+        timestamp: message.timestamp
+      })
+    }
   })
 });
