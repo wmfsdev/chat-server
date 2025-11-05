@@ -6,6 +6,7 @@ require('../config/passport');
 const prisma = require('../prisma/client');
 const { Prisma } = require('../generated/prisma')
 const { body, validationResult } = require('express-validator')
+const { loginLimiter, signupLimiter } = require('../config/rateLimitConfig')
 
 const accountRouter = express.Router();
 const frontendUrl = process.env.FRONTEND_URL
@@ -105,7 +106,7 @@ accountRouter.get("/auth", async (req, res, next) => {
   }
 })
 
-accountRouter.post("/login",
+accountRouter.post("/login", loginLimiter,
   [
   body('username')
     .notEmpty().withMessage('Username is required')
@@ -161,7 +162,7 @@ accountRouter.post("/login",
   }
 });
 
-accountRouter.post('/signup', 
+accountRouter.post('/signup', signupLimiter, 
   [
   body('username')
     .notEmpty().withMessage('Username is required')
