@@ -5,7 +5,7 @@ const jwt = require('jsonwebtoken')
 const prisma = require('./prisma/client')
 const zod = require("zod")
 
-const connect = io.of("/profile");
+const connect = io.of("/messages");
 
 connect.use((socket, next) => {
   const token = socket.handshake.auth.token
