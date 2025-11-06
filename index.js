@@ -17,6 +17,11 @@ app.use((req, res, next) => {
 
 app.use("/", accountRouter);
 
+app.get('/ip', (request, response) => {
+  console.log("IP address: ", request.ip)
+	response.send(request.ip);
+});
+
 app.use((err, req, res, next) => {
   console.log("express err handler")
   console.error(err);

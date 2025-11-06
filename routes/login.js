@@ -229,9 +229,4 @@ accountRouter.post('/signup', signupLimiter,
     }
 })
 
-accountRouter.get('/ip', (request, response) => {
-  console.log("IP address: ", request.ip)
-	response.send(request.ip);
-});
-
 module.exports = accountRouter;
