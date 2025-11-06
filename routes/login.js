@@ -229,7 +229,7 @@ accountRouter.post('/signup', signupLimiter,
     }
 })
 
-app.get('/ip', (request, response) => {
+accountRouter.get('/ip', (request, response) => {
   console.log("IP address: ", request.ip)
 	response.send(request.ip);
 });
