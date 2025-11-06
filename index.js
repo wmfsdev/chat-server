@@ -6,6 +6,8 @@ const { app, io, server } = require('./socket-instance');
 const express = require('express')
 const accountRouter = require('./routes/login');
 
+app.set('trust proxy', 1)
+
 app.use(express.json());
 
 app.use((req, res, next) => {
