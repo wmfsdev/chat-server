@@ -4,6 +4,7 @@ require('./config/passport')
 const jwt = require('jsonwebtoken')
 const prisma = require('./prisma/client')
 const zod = require("zod")
+const { rateLimiter } = require("./config/rateLimitConfig")
 
 const connect = io.of("/messages");
 
@@ -73,64 +74,82 @@ connect.on("connection", async (socket) => {
   socket.on("join_room", (id, data) => {
     socket.to(id).emit("user_joined", data.username)
   })
-
+  
   // SEND PUBLIC MESSAGE
   socket.on("send_public_message", async(data, callback) => {
     console.log("send_public_message")
-    console.log(data)
+    try {
+      await rateLimiter.consume(data.userId)
 
-    const User = zod.object({
-      message: zod.string().min(1).max(500),
-    })
-    const result = User.safeParse({ message: data.message })
+      const User = zod.object({
+        message: zod.string().min(1).max(500),
+      })
+      const result = User.safeParse({ message: data.message })
 
-    if (!result.success) {
-      callback({ status: "Bad Request"})
-    } else {
-      const message = await prisma.message.create({
-        data: {
-          content: data.message,
-          room: data.room,
-          authorId: data.userId
-        }
-      })
-      console.log("message: ", message)
-      const { id, content, timestamp } = message
-      
-      socket.to("public").emit("receive_public_message", {
-        id: data.id,
-        username: data.username,
-        message: content,
-        timestamp: timestamp
-      })
-      callback({ status: "Great" })
+      if (!result.success) {
+        callback({ status: "Bad Request"})
+      } else {
+        const message = await prisma.message.create({
+          data: {
+            content: data.message,
+            room: data.room,
+            authorId: data.userId
+          }
+        })
+        console.log("message: ", message)
+        const { id, content, timestamp } = message
+        
+        socket.to("public").emit("receive_public_message", {
+          id: data.id,
+          username: data.username,
+          message: content,
+          timestamp: timestamp
+        })
+        callback({ status: "Great" })
+      }
+    } catch(rejRes) {
+      console.log("consumed: ", rejRes.consumedPoints)
+      if (rejRes.consumedPoints > 40) {
+        return callback({ status: "force_logout" })
+      }
+      callback({ status: "Message Limit", timeleft: Math.ceil(rejRes.msBeforeNext / 1000) })
     }
   })
 
   // SEND PRIVATE MESSAGE
   socket.on("send_priv_message", async(data, callback) => {
-    const User = zod.object({
-      message: zod.string().min(1).max(500),
-    })
-    const result = User.safeParse({ message: data.message })
+    try {
+      await rateLimiter.consume(data.from.id)
 
-    if (!result.success) {
-      callback({ status: "Bad Request" });
-    } else {
-      const message = await prisma.message.create({
-        data: {
-          content: data.message,
-          room: data.to,
-          authorId: data.from.id,
-        }
+      const User = zod.object({
+        message: zod.string().min(1).max(500),
       })
-      callback({ status: "Great" })
-      socket.to(data.to).emit("receive_priv_message", { 
-        id: data.id,
-        from: data.from,
-        message: data.message,
-        timestamp: message.timestamp
-      })
+      const result = User.safeParse({ message: data.message })
+
+      if (!result.success) {
+        callback({ status: "Bad Request" });
+      } else {
+        const message = await prisma.message.create({
+          data: {
+            content: data.message,
+            room: data.to,
+            authorId: data.from.id,
+          }
+        })
+        callback({ status: "Great" })
+        socket.to(data.to).emit("receive_priv_message", { 
+          id: data.id,
+          from: data.from,
+          message: data.message,
+          timestamp: message.timestamp
+        })
+      }
+    } catch(rejRes) {
+      console.log("consume IP")
+      if (rejRes.consumedPoints > 40) {
+        return callback({ status: "force_logout" })
+      }
+      callback({ status: "Message Limit", timeleft: Math.ceil(rejRes.msBeforeNext / 1000) })
     }
   })
 });
