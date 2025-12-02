@@ -1,8 +1,7 @@
 # REAL-TIME CHAT
 
 LIVE: [https://chat-client-eta-sandy.vercel.app/](https://chat-client-eta-sandy.vercel.app// "https://chat-client-eta-sandy.vercel.app/")<br>
-
-BACKEND REPO: [https://github.com/wmfsdev/chat-server](https://github.com/wmfsdev/chat-server "https://github.com/wmfsdev/chat-server")
+BACKEND REPO: [https://github.com/wmfsdev/chat-server](https://github.com/wmfsdev/chat-server "https://github.com/wmfsdev/chat-server")<br>
 FRONTEND REPO: [https://github.com/wmfsdev/chat-client](https://github.com/wmfsdev/chat-client "https://github.com/wmfsdev/chat-client")
 
 ## OUTLINE
