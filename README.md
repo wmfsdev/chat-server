@@ -20,3 +20,5 @@ I have also utilised rate limiting to help mitigate against brute-force attacks 
 
 
 ## PRISMA SCHEMA
+
+<img width="1209" height="584" alt="chat_app_schema" src="https://github.com/user-attachments/assets/9a98c668-1e31-437b-86aa-cc2683566863" />
